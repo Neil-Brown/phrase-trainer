@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { Text, View, StyleSheet, Button } from 'react-native';
+import {  FlatList, Text, View, SafeAreaView, StyleSheet, Button } from 'react-native';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
+
+
 
 export default function AudioPlayer() {
   const [sound, setSound] = React.useState();
@@ -11,10 +13,23 @@ export default function AudioPlayer() {
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [buttontext, setButtontext] = React.useState("Play")
 
-
+  const [waveForm, setWaveForm] = React.useState([{id:1, value:50}, {id:2, value:90}])
+  const DATA = [
+  {
+    id: 1,
+    value:0.709843
+  },
+  {
+    id: 2,
+    value:0.2565
+  },
+  {
+    id: 3,
+    value:0.78653
+  },
+];
 
   function sample(s){
-    console.log(s)
     setMaxValue(s.durationMillis)
     setSlidePos(s.positionMillis)
     setTime(convertTime(s.positionMillis))
@@ -36,12 +51,15 @@ export default function AudioPlayer() {
 }
 
   async function loadSound() {
-    console.log('Loading Sound');
-    const { sound } = await Audio.Sound.createAsync( require('../assets/Hello.mp3')
-    );
+    const { sound } = await Audio.Sound.createAsync( require('../assets/Hello.mp3'))
     sound.setOnPlaybackStatusUpdate(sample)
+    sound.setOnAudioSampleReceived((s)=>{
+    console.log(s.channels[0].frames)
+      setWaveForm([1, 10])
+    })
     setSound(sound);
     console.log('Loaded Sound');
+    console.log(Object.keys(sound))
   }
 
   React.useEffect(() => {
@@ -63,39 +81,78 @@ export default function AudioPlayer() {
 
   React.useEffect(() => {
     loadSound()
+
   }, []);
+
+  const Item = ({title}) => (
+    <View style={[styles.item, {height:title*100}]}>
+    </View>
+  );
 
 
   return (
-    <View style={styles.container}>
-      <Button style={styles.button} title={buttontext} onPress={async()=>{
-        if(isPlaying){
-          sound.pauseAsync()
-          setIsPlaying(false)
-        } else{
-          await sound.playAsync();
-          setIsPlaying(true)
-        }
-      }
-    } />
-      <Slider
-        style={{width: 200, height: 40}}
-        minimumValue={0}
-        maximumValue={maxValue}
-        minimumTrackTintColor="red"
-        maximumTrackTintColor="#000000"
-        value ={slidePos}
-        onSlidingComplete={skip}
-      />
-      <Text>{time}</Text>
-    </View>
+    <SafeAreaView>
+      <View style={styles.waveformContainer}>
+        <FlatList
+        contentContainerStyle={{justifyContent: 'center', alignItems:"center", backgroundColor:"green"}}
+          horizontal
+          data={DATA}
+          renderItem={({item}) => <Item title={item.value} />}
+          keyExtractor={item => item.id}
+        />
+      </View>
+
+      <View style={styles.controls}>
+        <Button style={styles.button} title={buttontext} onPress={async()=>{
+          if(isPlaying){
+            sound.pauseAsync()
+            setIsPlaying(false)
+          } else{
+            await sound.playAsync();
+            setIsPlaying(true)
+          }
+        }}
+        />
+        <Slider
+          style={{width: 200, height: 40}}
+          minimumValue={0}
+          maximumValue={maxValue}
+          minimumTrackTintColor="red"
+          maximumTrackTintColor="#000000"
+          value ={slidePos}
+          onSlidingComplete={skip}
+        />
+        <Text style={styles.timeText}>{time}</Text>
+      </View>
+    </SafeAreaView>
 
   );
 }
 
 
 const styles = StyleSheet.create({
+  container:{
+  },
+  waveformContainer:{
+    backgroundColor:"yellow",
+    maxHeight:"90%",
+
+
+
+  },
   button: {
     backgroundColor: "red"
+  },
+  controls:{
+    flexDirection:"row",
+    justifyContent:"center",
+    alignItems:"center",
+    margin:10
+  },
+  item:{
+    backgroundColor:"blue",
+    margin:1,
+    width:5,
+
   }
 });
