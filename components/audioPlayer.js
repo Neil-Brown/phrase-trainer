@@ -13,21 +13,9 @@ export default function AudioPlayer() {
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [buttontext, setButtontext] = React.useState("Play")
 
-  const [waveForm, setWaveForm] = React.useState([{id:1, value:50}, {id:2, value:90}])
-  const DATA = [
-  {
-    id: 1,
-    value:0.709843
-  },
-  {
-    id: 2,
-    value:0.2565
-  },
-  {
-    id: 3,
-    value:0.78653
-  },
-];
+  const [waveForm, setWaveForm] = React.useState([])
+  let waveData = []
+  let count = 0
 
   function sample(s){
     setMaxValue(s.durationMillis)
@@ -50,12 +38,31 @@ export default function AudioPlayer() {
     return formattedTime + ":" + formattedSeconds;
 }
 
+async function parseData(data){
+  let wd =[]
+  let thisDataCount = 0
+  if(count >= 500){
+    return
+  }
+  for(let x =0;x < data.length;x++){
+    if(data[x] >=0.1 ){
+      let newValue = parseInt(`${data[x].toFixed(1)}`.split(".")[1])
+      console.log( newValue)
+      console.log(data[x])
+      wd.push({id:count, value:newValue})
+      count++
+      console.log("count " + count)
+    }
+    setWaveForm(oldArray => [...oldArray, ...wd])
+  }
+}
+
   async function loadSound() {
     const { sound } = await Audio.Sound.createAsync( require('../assets/Hello.mp3'))
     sound.setOnPlaybackStatusUpdate(sample)
-    sound.setOnAudioSampleReceived((s)=>{
-    console.log(s.channels[0].frames)
-      setWaveForm([1, 10])
+    sound.setOnAudioSampleReceived(async (s)=>{
+      //console.log(s.channels[0].frames)
+      await parseData(s.channels[0].frames)
     })
     setSound(sound);
     console.log('Loaded Sound');
@@ -85,7 +92,7 @@ export default function AudioPlayer() {
   }, []);
 
   const Item = ({title}) => (
-    <View style={[styles.item, {height:title*100}]}>
+    <View style={[styles.item, {height:title*40}]}>
     </View>
   );
 
@@ -96,7 +103,7 @@ export default function AudioPlayer() {
         <FlatList
         contentContainerStyle={{justifyContent: 'center', alignItems:"center", backgroundColor:"green"}}
           horizontal
-          data={DATA}
+          data={waveForm}
           renderItem={({item}) => <Item title={item.value} />}
           keyExtractor={item => item.id}
         />
