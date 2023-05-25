@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import AudioPlayer from "./components/audioPlayer"
 
-export default function App() {
+export default function WaveForm() {
   return (
     <View style={styles.container}>
       <AudioPlayer/>

@@ -1,7 +1,10 @@
 import * as React from 'react';
-import {  FlatList, Text, View, SafeAreaView, StyleSheet, Button } from 'react-native';
+import { Alert, FlatList, Text, View, SafeAreaView, StyleSheet, Button } from 'react-native';
 import { Audio } from 'expo-av';
-import Slider from '@react-native-community/slider';
+import {FileSystem, Asset, Constants } from 'expo';
+import Slider from '@react-native-community/slider'
+import Canvas from 'react-native-canvas';
+
 
 
 
@@ -13,9 +16,34 @@ export default function AudioPlayer() {
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [buttontext, setButtontext] = React.useState("Play")
 
+  const[xpos, setXpos] = React.useState(0)
+
   const [waveForm, setWaveForm] = React.useState([])
-  let waveData = []
-  let count = 0
+  let ctx = null
+
+  handleCanvas = (canvas) => {
+  if(canvas !== null){
+    ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 1;
+  }
+  }
+
+  React.useEffect(() => {
+  console.log(waveForm.length)
+  }, [waveForm])
+
+   React.useEffect(() => {
+  drawLine
+  }, [xPos])
+
+  function drawLine(height){
+    ctx.moveTo(xpos, 0);
+    ctx.lineTo(xpos, 50);
+    ctx.stroke();
+  }
 
   function sample(s){
     setMaxValue(s.durationMillis)
@@ -38,23 +66,14 @@ export default function AudioPlayer() {
     return formattedTime + ":" + formattedSeconds;
 }
 
-async function parseData(data){
-  let wd =[]
-  let thisDataCount = 0
-  if(count >= 500){
-    return
-  }
-  for(let x =0;x < data.length;x++){
-    if(data[x] >=0.1 ){
-      let newValue = parseInt(`${data[x].toFixed(1)}`.split(".")[1])
-      console.log( newValue)
-      console.log(data[x])
-      wd.push({id:count, value:newValue})
-      count++
-      console.log("count " + count)
-    }
-    setWaveForm(oldArray => [...oldArray, ...wd])
-  }
+function parseData(data){
+let newData = data.filter(value => value >= 0).map(value => value.toFixed(1))
+for(const val of newData){
+    drawLine(val)
+    setXpos(xpos+2)
+}
+setWaveForm((waveForm)=>[...waveForm, newData])
+//    setWaveForm(data.filter(value => value >= 0).map(value => value.toFixed(1)))
 }
 
   async function loadSound() {
@@ -62,11 +81,10 @@ async function parseData(data){
     sound.setOnPlaybackStatusUpdate(sample)
     sound.setOnAudioSampleReceived(async (s)=>{
       //console.log(s.channels[0].frames)
-      await parseData(s.channels[0].frames)
+      parseData(s.channels[0].frames)
     })
     setSound(sound);
     console.log('Loaded Sound');
-    console.log(Object.keys(sound))
   }
 
   React.useEffect(() => {
@@ -99,37 +117,28 @@ async function parseData(data){
 
   return (
     <SafeAreaView>
-      <View style={styles.waveformContainer}>
-        <FlatList
-        contentContainerStyle={{justifyContent: 'center', alignItems:"center", backgroundColor:"green"}}
-          horizontal
-          data={waveForm}
-          renderItem={({item}) => <Item title={item.value} />}
-          keyExtractor={item => item.id}
-        />
-      </View>
-
-      <View style={styles.controls}>
-        <Button style={styles.button} title={buttontext} onPress={async()=>{
-          if(isPlaying){
-            sound.pauseAsync()
-            setIsPlaying(false)
-          } else{
-            await sound.playAsync();
-            setIsPlaying(true)
-          }
-        }}
-        />
-        <Slider
-          style={{width: 200, height: 40}}
-          minimumValue={0}
-          maximumValue={maxValue}
-          minimumTrackTintColor="red"
-          maximumTrackTintColor="#000000"
-          value ={slidePos}
-          onSlidingComplete={skip}
-        />
-        <Text style={styles.timeText}>{time}</Text>
+        <Canvas style={{ width: '100%', height: '50%', backgroundColor: 'black' }} ref={handleCanvas} />
+        <View style={styles.controls}>
+            <Button style={styles.button} title={buttontext} onPress={async()=>{
+              if(isPlaying){
+                sound.pauseAsync()
+                setIsPlaying(false)
+              } else{
+                await sound.playAsync();
+                setIsPlaying(true)
+              }
+            }}
+            />
+            <Slider
+              style={{width: 200, height: 40}}
+              minimumValue={0}
+              maximumValue={maxValue}
+              minimumTrackTintColor="red"
+              maximumTrackTintColor="#000000"
+              value ={slidePos}
+              onSlidingComplete={skip}
+            />
+            <Text style={styles.timeText}>{time}</Text>
       </View>
     </SafeAreaView>
 
@@ -154,7 +163,7 @@ const styles = StyleSheet.create({
     flexDirection:"row",
     justifyContent:"center",
     alignItems:"center",
-    margin:10
+    margin:0
   },
   item:{
     backgroundColor:"blue",

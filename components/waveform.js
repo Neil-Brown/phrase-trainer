@@ -1,32 +1,11 @@
-import React, {useState} from 'react';
-import Sound from 'react-native-sound';
+import React from 'react';
+import {View } from 'react-native';
+import Canvas from 'react-native-canvas';
 
-const WaveForm = () => {
-  const [audioFile, setAudioFile] = useState(null);
-  const [waveform, setWaveform] = useState(null);
-
-  const handleAudioFileChange = (event) => {
-    setAudioFile(event.target.files[0]);
-  };
-
-  const getWaveform = async () => {
-    const sound = new Sound(audioFile, {
-      type: 'mp3',
-    });
-
-    const waveformData = await sound.getWaveform();
-    setWaveform(waveformData);
-  };
-
+export default function WaveForm() {
   return (
-    <div>
-      <input type="file" onChange={handleAudioFileChange} />
-      <button onClick={getWaveform}>Get Waveform</button>
-      {waveform && (
-        <Waveform waveformData={waveform} />
-      )}
-    </div>
+    <View style={{ flex: 1 }}>
+      <Canvas style={{ width: '100%', height: '25%', marginTop:25, backgroundColor: 'pink' }} />
+    </View>
   );
-};
-
-export default WaveForm;
+}
