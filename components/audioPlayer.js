@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, FlatList, Text, View, SafeAreaView, StyleSheet, Button } from 'react-native';
+import { Alert, FlatList, Text, View, SafeAreaView, StyleSheet, TextInput, TouchableOpacity, Button } from 'react-native';
 import { Audio } from 'expo-av';
 import {FileSystem, Asset, Constants } from 'expo';
 import Slider from '@react-native-community/slider'
@@ -15,34 +15,44 @@ export default function AudioPlayer() {
   const [time, setTime] = React.useState("00:00")
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [buttontext, setButtontext] = React.useState("Play")
-
-  const[xpos, setXpos] = React.useState(0)
+  const [canvasWidth, setCanvasWidth] = React.useState(2000)
+  const [loopStart, setLoopStart] = React.useState("0")
+  const [loopEnd, setLoopEnd] = React.useState(`${maxValue}`)
 
   const [waveForm, setWaveForm] = React.useState([])
+  const canvas = React.useRef(null);
   let ctx = null
 
+  let xPos = 0
+   let scroll = null
   handleCanvas = (canvas) => {
   if(canvas !== null){
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
-    ctx.strokeStyle = "white";
+    ctx.strokeStyle = "black";
     ctx.lineWidth = 1;
   }
   }
 
   React.useEffect(() => {
-  console.log(waveForm.length)
-  }, [waveForm])
 
-   React.useEffect(() => {
-  drawLine
-  }, [xPos])
+  }, [canvasWidth])
+
 
   function drawLine(height){
-    ctx.moveTo(xpos, 0);
-    ctx.lineTo(xpos, 50);
+    xPos+=1
+    if(xPos > canvasWidth){
+    setCanvasWidth(canvasWidth+2)
+    scroll.scrollTo({x: xPos, y: 0, animated: true})
+    }
+
+//   handleCanvas.current.focus(xPos, 100)
+    //scroll.scrollToEnd({animated: true})
+    ctx.moveTo(xPos, 0);
+    ctx.lineTo(xPos, height*500);
     ctx.stroke();
+
   }
 
   function sample(s){
@@ -70,7 +80,6 @@ function parseData(data){
 let newData = data.filter(value => value >= 0).map(value => value.toFixed(1))
 for(const val of newData){
     drawLine(val)
-    setXpos(xpos+2)
 }
 setWaveForm((waveForm)=>[...waveForm, newData])
 //    setWaveForm(data.filter(value => value >= 0).map(value => value.toFixed(1)))
@@ -84,6 +93,7 @@ setWaveForm((waveForm)=>[...waveForm, newData])
       parseData(s.channels[0].frames)
     })
     setSound(sound);
+    xPos = 0
     console.log('Loaded Sound');
   }
 
@@ -117,7 +127,7 @@ setWaveForm((waveForm)=>[...waveForm, newData])
 
   return (
     <SafeAreaView>
-        <Canvas style={{ width: '100%', height: '50%', backgroundColor: 'black' }} ref={handleCanvas} />
+        <Canvas style={[styles.canvas, {width:canvasWidth}]} ref={handleCanvas} />
         <View style={styles.controls}>
             <Button style={styles.button} title={buttontext} onPress={async()=>{
               if(isPlaying){
@@ -137,8 +147,28 @@ setWaveForm((waveForm)=>[...waveForm, newData])
               maximumTrackTintColor="#000000"
               value ={slidePos}
               onSlidingComplete={skip}
+              lowerLimit={parseFloat(loopStart)}
+              minimumTrackTintColor="blue"
             />
             <Text style={styles.timeText}>{time}</Text>
+      </View>
+      <View style={styles.labelContainer}>
+        <Text style={styles.label}>Start</Text>
+        <Text style={styles.label}>End</Text>
+      </View>
+      <View style={styles.controls}>
+       <TextInput
+        style={styles.input}
+        onChangeText={setLoopStart}
+        value={loopStart}
+        keyboardType="numeric"
+      />
+      <TextInput
+        style={styles.input}
+        onChangeText={setLoopEnd}
+        value={loopEnd}
+        keyboardType="numeric"
+      />
       </View>
     </SafeAreaView>
 
@@ -157,9 +187,14 @@ const styles = StyleSheet.create({
 
   },
   button: {
-    backgroundColor: "red"
+    alignItems: 'center',
+    backgroundColor: '#DDDDDD',
+    padding:10,
+    borderRadius:10,
+    margin:10
   },
   controls:{
+  backgroundColor:"red",
     flexDirection:"row",
     justifyContent:"center",
     alignItems:"center",
@@ -169,6 +204,28 @@ const styles = StyleSheet.create({
     backgroundColor:"blue",
     margin:1,
     width:5,
+  },
+  canvas:{
+    height:"40%",
+  backgroundColor:"yellow"
+  },
 
+  input:{
+    borderWidth:1,
+    borderColor:"black",
+    height:40,
+    width:150,
+    padding:10,
+    margin:10
+  },
+  labelContainer:{
+    flexDirection:"row",
+    justifyContent:"center"
+  },
+  label:{
+    fontSize:50,
+    color:"green"
   }
-});
+  }
+  )
+
